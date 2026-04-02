@@ -12,7 +12,7 @@ on:
         description: Add Kernel Android support
         required: false
         type: boolean
-        default: false
+        default: true
       appgroup_3dsupport:
         description: Include 3D support packages
         required: false
@@ -32,7 +32,7 @@ on:
         description: Include desktop tools packages
         required: false
         type: boolean
-        default: false
+        default: true
       appgroup_editors:
         description: Include editor packages
         required: false
@@ -67,7 +67,7 @@ on:
         description: Include remote desktop packages
         required: false
         type: boolean
-        default: false
+        default: true
 
 permissions:
   contents: write
@@ -101,6 +101,18 @@ jobs:
 
       - name: Ensure build script is executable
         run: chmod +x build.sh
+
+      - name: Install and enable qemu binfmt for arm64 chroot
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y qemu-user-static binfmt-support
+          sudo modprobe binfmt_misc || true
+          sudo mountpoint -q /proc/sys/fs/binfmt_misc || sudo mount -t binfmt_misc binfmt_misc /proc/sys/fs/binfmt_misc
+          sudo update-binfmts --enable qemu-arm || true
+          sudo update-binfmts --enable qemu-aarch64 || true
+          test -e /proc/sys/fs/binfmt_misc/qemu-aarch64
+          /usr/bin/qemu-aarch64-static --version
 
       - name: Apply Android kernel support patch
         if: ${{ inputs.add_kernel_android_support }}
