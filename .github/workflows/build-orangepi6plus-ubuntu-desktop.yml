@@ -8,6 +8,13 @@ on:
         description: Optional GitHub Release tag. Use "auto" to generate one.
         required: false
         default: auto
+      runner_system:
+        description: '运行的平台'
+        required: true
+        type: choice
+        options:                      
+          - ubuntu-24.04-arm
+          - ubuntu-24.04
       add_kernel_android_support:
         description: Add Kernel Android support
         required: false
@@ -74,7 +81,7 @@ permissions:
 
 jobs:
   build-orangepi6plus-ubuntu-desktop:
-    runs-on: ubuntu-24.04-arm
+    runs-on: ${{ inputs.runner_system }}
     timeout-minutes: 360
 
     env:
@@ -103,6 +110,7 @@ jobs:
         run: chmod +x build.sh
 
       - name: Install and enable qemu binfmt for arm64 chroot
+        if: ${{ inputs.runner_system == 'ubuntu-24.04' }}
         run: |
           set -euxo pipefail
           sudo apt-get update
