@@ -115,6 +115,18 @@ jobs:
           sudo docker system prune -af || true
           df -h
 
+      - name: Install and enable qemu binfmt for arm64 chroot
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y qemu-user-static binfmt-support
+          sudo modprobe binfmt_misc || true
+          sudo mountpoint -q /proc/sys/fs/binfmt_misc || sudo mount -t binfmt_misc binfmt_misc /proc/sys/fs/binfmt_misc
+          sudo update-binfmts --enable qemu-arm || true
+          sudo update-binfmts --enable qemu-aarch64 || true
+          test -e /proc/sys/fs/binfmt_misc/qemu-aarch64
+          /usr/bin/qemu-aarch64-static --version
+
       - name: Ensure build script is executable
         run: chmod +x build.sh
 
