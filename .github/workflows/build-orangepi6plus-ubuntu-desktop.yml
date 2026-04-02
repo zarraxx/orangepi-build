@@ -1,0 +1,240 @@
+# edit by codex
+name: Build Orange Pi 6 Plus Ubuntu Desktop
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Optional GitHub Release tag. Use "auto" to generate one.
+        required: false
+        default: auto
+      add_kernel_android_support:
+        description: Add Kernel Android support
+        required: false
+        type: boolean
+        default: false
+      appgroup_3dsupport:
+        description: Include 3D support packages
+        required: false
+        type: boolean
+        default: true
+      appgroup_browsers:
+        description: Include browser packages
+        required: false
+        type: boolean
+        default: true
+      appgroup_chat:
+        description: Include chat packages
+        required: false
+        type: boolean
+        default: false
+      appgroup_desktop_tools:
+        description: Include desktop tools packages
+        required: false
+        type: boolean
+        default: false
+      appgroup_editors:
+        description: Include editor packages
+        required: false
+        type: boolean
+        default: false
+      appgroup_email:
+        description: Include email packages
+        required: false
+        type: boolean
+        default: false
+      appgroup_internet:
+        description: Include internet utility packages
+        required: false
+        type: boolean
+        default: false
+      appgroup_multimedia:
+        description: Include multimedia packages
+        required: false
+        type: boolean
+        default: false
+      appgroup_office:
+        description: Include office packages
+        required: false
+        type: boolean
+        default: false
+      appgroup_programming:
+        description: Include programming packages
+        required: false
+        type: boolean
+        default: false
+      appgroup_remote_desktop:
+        description: Include remote desktop packages
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  build-orangepi6plus-ubuntu-desktop:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+
+    env:
+      DEBIAN_FRONTEND: noninteractive
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Show disk usage before cleanup
+        run: df -h
+
+      - name: Free disk space on runner
+        run: |
+          set -euxo pipefail
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo docker system prune -af || true
+          df -h
+
+      - name: Ensure build script is executable
+        run: chmod +x build.sh
+
+      - name: Apply Android kernel support patch
+        if: ${{ inputs.add_kernel_android_support }}
+        run: |
+          set -euxo pipefail
+          git apply --check fork_patch/0001-cix-enable-kernel-android-support.patch
+          git apply fork_patch/0001-cix-enable-kernel-android-support.patch
+
+      - name: Resolve selected desktop appgroups
+        id: appgroups
+        env:
+          APPGROUP_3DSUPPORT: ${{ inputs.appgroup_3dsupport }}
+          APPGROUP_BROWSERS: ${{ inputs.appgroup_browsers }}
+          APPGROUP_CHAT: ${{ inputs.appgroup_chat }}
+          APPGROUP_DESKTOP_TOOLS: ${{ inputs.appgroup_desktop_tools }}
+          APPGROUP_EDITORS: ${{ inputs.appgroup_editors }}
+          APPGROUP_EMAIL: ${{ inputs.appgroup_email }}
+          APPGROUP_INTERNET: ${{ inputs.appgroup_internet }}
+          APPGROUP_MULTIMEDIA: ${{ inputs.appgroup_multimedia }}
+          APPGROUP_OFFICE: ${{ inputs.appgroup_office }}
+          APPGROUP_PROGRAMMING: ${{ inputs.appgroup_programming }}
+          APPGROUP_REMOTE_DESKTOP: ${{ inputs.appgroup_remote_desktop }}
+        run: |
+          set -euxo pipefail
+
+          selected=()
+          [ "${APPGROUP_3DSUPPORT}" = "true" ] && selected+=("3dsupport")
+          [ "${APPGROUP_BROWSERS}" = "true" ] && selected+=("browsers")
+          [ "${APPGROUP_CHAT}" = "true" ] && selected+=("chat")
+          [ "${APPGROUP_DESKTOP_TOOLS}" = "true" ] && selected+=("desktop_tools")
+          [ "${APPGROUP_EDITORS}" = "true" ] && selected+=("editors")
+          [ "${APPGROUP_EMAIL}" = "true" ] && selected+=("email")
+          [ "${APPGROUP_INTERNET}" = "true" ] && selected+=("internet")
+          [ "${APPGROUP_MULTIMEDIA}" = "true" ] && selected+=("multimedia")
+          [ "${APPGROUP_OFFICE}" = "true" ] && selected+=("office")
+          [ "${APPGROUP_PROGRAMMING}" = "true" ] && selected+=("programming")
+          [ "${APPGROUP_REMOTE_DESKTOP}" = "true" ] && selected+=("remote_desktop")
+
+          echo "selected=${selected[*]}" >> "${GITHUB_OUTPUT}"
+
+      - name: Build Ubuntu Noble GNOME image
+        env:
+          DESKTOP_APPGROUPS_SELECTED: ${{ steps.appgroups.outputs.selected }}
+        run: |
+          set -euxo pipefail
+          sudo --preserve-env=DEBIAN_FRONTEND ./build.sh \
+            LIB_TAG="" \
+            BOARD=orangepi6plus \
+            BUILD_OPT=image \
+            BRANCH=next \
+            RELEASE=noble \
+            BUILD_DESKTOP=yes \
+            BUILD_MINIMAL=no \
+            DESKTOP_ENVIRONMENT=gnome \
+            DESKTOP_ENVIRONMENT_CONFIG_NAME=config_base \
+            DESKTOP_APPGROUPS_SELECTED="${DESKTOP_APPGROUPS_SELECTED}" \
+            DESKTOP_APT_FLAGS_SELECTED="" \
+            KERNEL_CONFIGURE=no \
+            GITEE_SERVER=yes \
+            DOWNLOAD_MIRROR=china \
+            COMPRESS_OUTPUTIMAGE=yes
+
+      - name: Locate build output
+        id: collect
+        run: |
+          set -euxo pipefail
+          latest_dir="$(find output/images -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' | sort -n | tail -n 1 | cut -d' ' -f2-)"
+          if [ -z "${latest_dir}" ]; then
+            echo "No image output directory found." >&2
+            exit 1
+          fi
+
+          mapfile -t release_files < <(find "${latest_dir}" -maxdepth 1 -type f \( -name '*.img.xz' -o -name '*.img.xz.sha' -o -name '*.img.sha' \) | sort)
+          if [ "${#release_files[@]}" -eq 0 ]; then
+            mapfile -t release_files < <(find "${latest_dir}" -maxdepth 1 -type f \( -name '*.img' -o -name '*.img.sha' \) | sort)
+          fi
+          if [ "${#release_files[@]}" -eq 0 ]; then
+            echo "No release files found in ${latest_dir}." >&2
+            exit 1
+          fi
+
+          {
+            echo "latest_dir=${latest_dir}"
+            echo "release_files<<EOF"
+            printf '%s\n' "${release_files[@]}"
+            echo "EOF"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: orangepi6plus-ubuntu-desktop
+          path: |
+            ${{ steps.collect.outputs.latest_dir }}
+            output/debug
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Create GitHub Release and upload image
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_RELEASE_TAG: ${{ github.event.inputs.release_tag }}
+          RELEASE_FILES: ${{ steps.collect.outputs.release_files }}
+          DESKTOP_APPGROUPS_SELECTED: ${{ steps.appgroups.outputs.selected }}
+          ADD_KERNEL_ANDROID_SUPPORT: ${{ inputs.add_kernel_android_support }}
+        run: |
+          set -euxo pipefail
+
+          tag="${INPUT_RELEASE_TAG}"
+          if [ -z "${tag}" ] || [ "${tag}" = "auto" ]; then
+            tag="orangepi6plus-ubuntu-desktop-$(date -u +%Y%m%d-%H%M%S)-run${GITHUB_RUN_NUMBER}"
+          fi
+
+          title="Orange Pi 6 Plus Ubuntu Noble Desktop ${tag}"
+          notes="$(cat <<EOF
+          Automated image build for Orange Pi 6 Plus.
+
+          Build command:
+          sudo ./build.sh BOARD=orangepi6plus BUILD_OPT=image BRANCH=next RELEASE=noble BUILD_DESKTOP=yes BUILD_MINIMAL=no DESKTOP_ENVIRONMENT=gnome DESKTOP_ENVIRONMENT_CONFIG_NAME=config_base DESKTOP_APPGROUPS_SELECTED=\"${DESKTOP_APPGROUPS_SELECTED}\" DESKTOP_APT_FLAGS_SELECTED=\"\" KERNEL_CONFIGURE=no GITEE_SERVER=yes DOWNLOAD_MIRROR=china COMPRESS_OUTPUTIMAGE=yes
+
+          Android kernel support patch:
+          ${ADD_KERNEL_ANDROID_SUPPORT}
+
+          Commit:
+          ${GITHUB_SHA}
+          EOF
+          )"
+
+          mapfile -t files <<< "${RELEASE_FILES}"
+          if gh release view "${tag}" >/dev/null 2>&1; then
+            gh release upload "${tag}" "${files[@]}" --clobber
+          else
+            gh release create "${tag}" "${files[@]}" \
+              --title "${title}" \
+              --notes "${notes}" \
+              --target "${GITHUB_SHA}"
+          fi
