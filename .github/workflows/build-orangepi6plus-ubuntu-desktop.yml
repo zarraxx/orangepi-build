@@ -18,9 +18,6 @@ on:
           - ubuntu-latest    
           - ubuntu-24.04 
           - ubuntu-22.04
-            
-
-
       add_kernel_android_support:
         description: Add Kernel Android support
         required: false
@@ -128,6 +125,27 @@ jobs:
           test -e /proc/sys/fs/binfmt_misc/qemu-aarch64
           /usr/bin/qemu-aarch64-static --version
 
+      - name: Configure Cix compiler compatibility on ARM runner
+        if: ${{ inputs.runner_system == 'ubuntu-22.04-arm' || inputs.runner_system == 'ubuntu-24.04-arm' }}
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu binutils-aarch64-linux-gnu
+
+          compat_dir="${GITHUB_WORKSPACE}/.ci-toolchain-compat/bin"
+          mkdir -p "${compat_dir}"
+
+          for tool in gcc g++ cpp ld ar as nm objcopy objdump ranlib strip readelf addr2line gcov gcov-dump gcov-tool strings; do
+            target="/usr/bin/aarch64-linux-gnu-${tool}"
+            if [ -e "${target}" ]; then
+              ln -sf "${target}" "${compat_dir}/aarch64-none-linux-gnu-${tool}"
+            fi
+          done
+
+          echo "${compat_dir}" >> "${GITHUB_PATH}"
+          echo "CIX_TOOLCHAIN_DIR=${compat_dir}" >> "${GITHUB_ENV}"
+          "${compat_dir}/aarch64-none-linux-gnu-gcc" -dumpversion
+
       - name: Apply Android kernel support patch
         if: ${{ inputs.add_kernel_android_support }}
         run: |
@@ -170,9 +188,16 @@ jobs:
       - name: Build Ubuntu Noble GNOME image
         env:
           DESKTOP_APPGROUPS_SELECTED: ${{ steps.appgroups.outputs.selected }}
+          RUNNER_SYSTEM: ${{ inputs.runner_system }}
         run: |
           set -euxo pipefail
-          sudo --preserve-env=DEBIAN_FRONTEND ./build.sh \
+          extra_args=()
+          if [ "${RUNNER_SYSTEM}" = "ubuntu-22.04-arm" ] || [ "${RUNNER_SYSTEM}" = "ubuntu-24.04-arm" ]; then
+            extra_args+=("toolchain=${CIX_TOOLCHAIN_DIR}")
+          fi
+
+          sudo --preserve-env=DEBIAN_FRONTEND,CIX_TOOLCHAIN_DIR,RUNNER_SYSTEM ./build.sh \
+            "${extra_args[@]}" \
             LIB_TAG="" \
             BOARD=orangepi6plus \
             BUILD_OPT=image \
