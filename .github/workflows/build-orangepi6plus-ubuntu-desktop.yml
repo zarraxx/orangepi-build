@@ -12,12 +12,13 @@ on:
         description: '运行的平台'
         required: true
         type: choice
-        options:           
+        options:   
+          - ubuntu-24.04 
+          - ubuntu-22.04
+          - ubuntu-latest       
           - ubuntu-22.04-arm           
           - ubuntu-24.04-arm
-          - ubuntu-22.04
-          - ubuntu-24.04
-          - ubuntu-latest
+
       add_kernel_android_support:
         description: Add Kernel Android support
         required: false
