@@ -191,6 +191,19 @@ jobs:
       - name: Ensure build script is executable
         run: chmod +x build.sh
 
+      - name: Install and enable qemu binfmt for x86 tools on ARM64
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y qemu-user-static binfmt-support
+          sudo modprobe binfmt_misc || true
+          sudo mountpoint -q /proc/sys/fs/binfmt_misc || sudo mount -t binfmt_misc binfmt_misc /proc/sys/fs/binfmt_misc
+          sudo update-binfmts --enable qemu-i386 || true
+          sudo update-binfmts --enable qemu-x86_64 || true
+          test -e /proc/sys/fs/binfmt_misc/qemu-x86_64
+          /usr/bin/qemu-x86_64-static --version
+          /usr/bin/qemu-i386-static --version
+
       - name: Download kernel artifacts
         uses: actions/download-artifact@v4
         with:
