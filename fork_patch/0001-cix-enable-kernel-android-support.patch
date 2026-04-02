@@ -1,0 +1,47 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+Subject: [PATCH] cix: enable Android container kernel support (edit by codex)
+
+diff --git a/external/config/kernel/linux-6.1-cix-p1-current.config b/external/config/kernel/linux-6.1-cix-p1-current.config
+index e37f940..0c09ce5 100644
+--- a/external/config/kernel/linux-6.1-cix-p1-current.config
++++ b/external/config/kernel/linux-6.1-cix-p1-current.config
+@@ -7543,7 +7543,12 @@ CONFIG_RAS=y
+ #
+ # Android
+ #
+-# CONFIG_ANDROID_BINDER_IPC is not set
++CONFIG_ANDROID=y
++CONFIG_ANDROID_BINDER_IPC=y
++CONFIG_ANDROID_BINDERFS=y
++CONFIG_ANDROID_BINDER_DEVICES="binder,hwbinder,vndbinder,anbox-binder,anbox-hwbinder,anbox-vndbinder"
++# CONFIG_ANDROID_BINDER_IPC_SELFTEST is not set
++# CONFIG_ANDROID_DEBUG_SYMBOLS is not set
+ # CONFIG_MPAM_ARCH is not set
+ # end of Android
+ 
+diff --git a/external/config/kernel/linux-6.6-cix-p1-next.config b/external/config/kernel/linux-6.6-cix-p1-next.config
+index be34de9..36d010c 100644
+--- a/external/config/kernel/linux-6.6-cix-p1-next.config
++++ b/external/config/kernel/linux-6.6-cix-p1-next.config
+@@ -6876,7 +6876,7 @@ CONFIG_VIDEO_MAX96712=m
+ #
+ # Android
+ #
+-# CONFIG_ASHMEM is not set
++CONFIG_ASHMEM=y
+ # end of Android
+ 
+ # CONFIG_STAGING_BOARD is not set
+@@ -7934,6 +7934,11 @@ CONFIG_RAS=y
+ #
+ # Android
+ #
+-# CONFIG_ANDROID_BINDER_IPC is not set
++CONFIG_ANDROID=y
++CONFIG_ANDROID_BINDER_IPC=y
++CONFIG_ANDROID_BINDERFS=y
++CONFIG_ANDROID_BINDER_DEVICES="binder,hwbinder,vndbinder,anbox-binder,anbox-hwbinder,anbox-vndbinder"
++# CONFIG_ANDROID_BINDER_IPC_SELFTEST is not set
++# CONFIG_ANDROID_DEBUG_SYMBOLS is not set
+ # CONFIG_MPAM_ARCH is not set
+ # end of Android
