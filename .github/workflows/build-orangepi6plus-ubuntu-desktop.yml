@@ -23,6 +23,11 @@ on:
         required: false
         type: boolean
         default: true
+      add_kernel_usb_device_support:
+        description: Add Kernel USB device support
+        required: false
+        type: boolean
+        default: true
       appgroup_3dsupport:
         description: Include 3D support packages
         required: false
@@ -153,6 +158,13 @@ jobs:
           git apply --check fork_patch/0001-cix-enable-kernel-android-support.patch
           git apply fork_patch/0001-cix-enable-kernel-android-support.patch
 
+      - name: Apply USB device kernel support patch
+        if: ${{ inputs.add_kernel_usb_device_support }}
+        run: |
+          set -euxo pipefail
+          git apply --check fork_patch/0002-cix-enable-usb-device-gadget-support.patch
+          git apply fork_patch/0002-cix-enable-usb-device-gadget-support.patch
+
       - name: Resolve selected desktop appgroups
         id: appgroups
         env:
@@ -257,6 +269,7 @@ jobs:
           RELEASE_FILES: ${{ steps.collect.outputs.release_files }}
           DESKTOP_APPGROUPS_SELECTED: ${{ steps.appgroups.outputs.selected }}
           ADD_KERNEL_ANDROID_SUPPORT: ${{ inputs.add_kernel_android_support }}
+          ADD_KERNEL_USB_DEVICE_SUPPORT: ${{ inputs.add_kernel_usb_device_support }}
         run: |
           set -euxo pipefail
 
@@ -274,6 +287,9 @@ jobs:
 
           Android kernel support patch:
           ${ADD_KERNEL_ANDROID_SUPPORT}
+
+          USB device kernel support patch:
+          ${ADD_KERNEL_USB_DEVICE_SUPPORT}
 
           Commit:
           ${GITHUB_SHA}
