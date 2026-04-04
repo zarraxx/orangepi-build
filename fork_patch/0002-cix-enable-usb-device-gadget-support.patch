@@ -5,7 +5,7 @@ diff --git a/external/config/kernel/linux-6.1-cix-p1-current.config b/external/c
 index e37f940..f15fabc 100644
 --- a/external/config/kernel/linux-6.1-cix-p1-current.config
 +++ b/external/config/kernel/linux-6.1-cix-p1-current.config
-@@ -6020,30 +6020,30 @@ CONFIG_USB_CONFIGFS_MASS_STORAGE=y
+@@ -6020,30 +6020,30 @@ CONFIG_USB_CONFIGFS_MASS_STORAGE=m
  CONFIG_USB_CONFIGFS_F_LB_SS=m
  CONFIG_USB_CONFIGFS_F_FS=m
 -# CONFIG_USB_CONFIGFS_F_UAC1 is not set
@@ -22,7 +22,7 @@ index e37f940..f15fabc 100644
 +CONFIG_USB_CONFIGFS_F_HID=m
 +CONFIG_USB_CONFIGFS_F_UVC=m
 +CONFIG_USB_CONFIGFS_F_PRINTER=m
-
+ 
  #
  # USB Gadget precomposed configurations
  #
@@ -48,7 +48,7 @@ index e37f940..f15fabc 100644
 +CONFIG_USB_MASS_STORAGE=m
 +CONFIG_USB_G_SERIAL=m
 +CONFIG_USB_MIDI_GADGET=m
-+CONFIG_USB_G_PRINTER=y
++CONFIG_USB_G_PRINTER=m
 +CONFIG_USB_CDC_COMPOSITE=m
 +CONFIG_USB_G_ACM_MS=m
 +CONFIG_USB_G_MULTI=m
@@ -63,7 +63,7 @@ diff --git a/external/config/kernel/linux-6.6-cix-p1-next.config b/external/conf
 index be34de9..ddd942f 100644
 --- a/external/config/kernel/linux-6.6-cix-p1-next.config
 +++ b/external/config/kernel/linux-6.6-cix-p1-next.config
-@@ -6321,31 +6321,31 @@ CONFIG_USB_CONFIGFS_MASS_STORAGE=y
+@@ -6321,31 +6321,31 @@ CONFIG_USB_CONFIGFS_MASS_STORAGE=m
  CONFIG_USB_CONFIGFS_F_LB_SS=m
  CONFIG_USB_CONFIGFS_F_FS=m
 -# CONFIG_USB_CONFIGFS_F_UAC1 is not set
