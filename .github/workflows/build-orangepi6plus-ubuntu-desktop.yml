@@ -226,7 +226,7 @@ jobs:
             DOWNLOAD_MIRROR=china \
             COMPRESS_OUTPUTIMAGE=yes
 
-      - name: Locate build output
+      - name: Prepare split release assets
         id: collect
         run: |
           set -euxo pipefail
@@ -236,17 +236,32 @@ jobs:
             exit 1
           fi
 
-          mapfile -t release_files < <(find "${latest_dir}" -maxdepth 1 -type f \( -name '*.img.xz' -o -name '*.img.xz.sha' -o -name '*.img.sha' \) | sort)
-          if [ "${#release_files[@]}" -eq 0 ]; then
-            mapfile -t release_files < <(find "${latest_dir}" -maxdepth 1 -type f \( -name '*.img' -o -name '*.img.sha' \) | sort)
+          xz_file="$(find "${latest_dir}" -maxdepth 1 -type f -name '*.img.xz' | sort | head -n 1)"
+          if [ -z "${xz_file}" ]; then
+            echo "No compressed image (.img.xz) found in ${latest_dir}." >&2
+            exit 1
           fi
+
+          xz_name="$(basename "${xz_file}")"
+          release_dir="${latest_dir}/release-assets"
+          mkdir -p "${release_dir}"
+
+          sha_file="${release_dir}/${xz_name}.sha256sum"
+          sha256sum -b "${xz_file}" > "${sha_file}"
+
+          rm -f "${release_dir}/${xz_name}.part-"*
+          split -b 500M -d -a 3 "${xz_file}" "${release_dir}/${xz_name}.part-"
+
+          mapfile -t release_files < <(find "${release_dir}" -maxdepth 1 -type f \( -name "${xz_name}.part-*" -o -name "${xz_name}.sha256sum" \) | sort)
           if [ "${#release_files[@]}" -eq 0 ]; then
-            echo "No release files found in ${latest_dir}." >&2
+            echo "No split release files found in ${release_dir}." >&2
             exit 1
           fi
 
           {
             echo "latest_dir=${latest_dir}"
+            echo "release_dir=${release_dir}"
+            echo "image_name=${xz_name}"
             echo "release_files<<EOF"
             printf '%s\n' "${release_files[@]}"
             echo "EOF"
@@ -257,7 +272,7 @@ jobs:
         with:
           name: orangepi6plus-ubuntu-desktop
           path: |
-            ${{ steps.collect.outputs.latest_dir }}
+            ${{ steps.collect.outputs.release_dir }}
             output/debug
           if-no-files-found: error
           retention-days: 7
@@ -267,6 +282,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           INPUT_RELEASE_TAG: ${{ github.event.inputs.release_tag }}
           RELEASE_FILES: ${{ steps.collect.outputs.release_files }}
+          RELEASE_IMAGE_NAME: ${{ steps.collect.outputs.image_name }}
           DESKTOP_APPGROUPS_SELECTED: ${{ steps.appgroups.outputs.selected }}
           ADD_KERNEL_ANDROID_SUPPORT: ${{ inputs.add_kernel_android_support }}
           ADD_KERNEL_USB_DEVICE_SUPPORT: ${{ inputs.add_kernel_usb_device_support }}
@@ -290,6 +306,14 @@ jobs:
 
           USB device kernel support patch:
           ${ADD_KERNEL_USB_DEVICE_SUPPORT}
+
+          Release asset format:
+          ${RELEASE_IMAGE_NAME}.part-000 ... ${RELEASE_IMAGE_NAME}.part-XXX
+          ${RELEASE_IMAGE_NAME}.sha256sum
+
+          Rebuild command:
+          cat ${RELEASE_IMAGE_NAME}.part-* > ${RELEASE_IMAGE_NAME}
+          sha256sum -c ${RELEASE_IMAGE_NAME}.sha256sum
 
           Commit:
           ${GITHUB_SHA}
