@@ -11,7 +11,7 @@ index e37f940..0c09ce5 100644
  #
 -# CONFIG_ANDROID_BINDER_IPC is not set
 +CONFIG_ANDROID=y
-+CONFIG_ANDROID_BINDER_IPC=y
++CONFIG_ANDROID_BINDER_IPC=m
 +CONFIG_ANDROID_BINDERFS=y
 +CONFIG_ANDROID_BINDER_DEVICES="binder,hwbinder,vndbinder,anbox-binder,anbox-hwbinder,anbox-vndbinder"
 +# CONFIG_ANDROID_BINDER_IPC_SELFTEST is not set
@@ -28,7 +28,7 @@ index be34de9..36d010c 100644
  # Android
  #
 -# CONFIG_ASHMEM is not set
-+CONFIG_ASHMEM=y
++CONFIG_ASHMEM=m
  # end of Android
  
  # CONFIG_STAGING_BOARD is not set
@@ -38,7 +38,7 @@ index be34de9..36d010c 100644
  #
 -# CONFIG_ANDROID_BINDER_IPC is not set
 +CONFIG_ANDROID=y
-+CONFIG_ANDROID_BINDER_IPC=y
++CONFIG_ANDROID_BINDER_IPC=m
 +CONFIG_ANDROID_BINDERFS=y
 +CONFIG_ANDROID_BINDER_DEVICES="binder,hwbinder,vndbinder,anbox-binder,anbox-hwbinder,anbox-vndbinder"
 +# CONFIG_ANDROID_BINDER_IPC_SELFTEST is not set
