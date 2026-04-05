@@ -311,11 +311,14 @@ jobs:
           fi
 
           xz_name="$(basename "${xz_file}")"
-          release_dir="${latest_dir}/release-assets"
+          release_root="${GITHUB_WORKSPACE}/release-assets"
+          release_dir="${release_root}/$(basename "${latest_dir}")"
+          rm -rf "${release_dir}"
           mkdir -p "${release_dir}"
 
           sha_file="${release_dir}/${xz_name}.sha256sum"
-          sha256sum -b "${xz_file}" > "${sha_file}"
+          hash_value="$(sha256sum -b "${xz_file}" | awk '{print $1}')"
+          printf '%s *%s\n' "${hash_value}" "${xz_name}" > "${sha_file}"
 
           rm -f "${release_dir}/${xz_name}.part-"*
           split -b 500M -d -a 3 "${xz_file}" "${release_dir}/${xz_name}.part-"
